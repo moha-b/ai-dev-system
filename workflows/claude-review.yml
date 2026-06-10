@@ -17,6 +17,7 @@ permissions:
   contents: read             # read the diff
   pull-requests: write       # post the review
   issues: read               # read the originating issue
+  id-token: write            # REQUIRED: the Claude action mints an OIDC token. Without this the run fails with "Could not fetch an OIDC token".
 
 jobs:
   review:
@@ -31,14 +32,19 @@ jobs:
       - name: Checkout ai-dev-system (rules)
         uses: actions/checkout@v4
         with:
+          # owner/repo ONLY — never a full URL. e.g.  moha-b/ai-dev-system
+          # A URL here fails with: "Invalid repository ... Expected format {owner}/{repo}".
           repository: <your-org>/ai-dev-system
+          ref: main                      # name the branch so checkout skips the default-branch API lookup (avoids "Not Found" on that step)
           path: .ai-dev-system
-          # If ai-dev-system is private, add: token: ${{ secrets.AIDEV_REPO_TOKEN }}
+          # If ai-dev-system is PUBLIC, no token is needed (recommended — it's just rules).
+          # If PRIVATE, create a read-only PAT secret and uncomment:
+          # token: ${{ secrets.AIDEV_REPO_TOKEN }}
 
       - name: Claude review
         uses: anthropics/claude-code-action@v1
         with:
-          # Use ONE of the next two lines:
+          # Use ONE of the next two lines, matching the secret you created:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: |

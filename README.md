@@ -17,6 +17,22 @@ The rules live on disk. Three roles take turns reading them:
 
 Both tools read the same files, which is *why* swapping the implementer can't drift the structure — nothing lives in one tool's head.
 
+## Adopt in a new project (quick steps)
+
+Once-per-computer setup (clone this repo, set `AIDEV_HOME`, install context-mode)
+is in `SETUP.md` Part 1. After that, each new project is just:
+
+1. Copy the templates in: `.claude/` folder, `CLAUDE.md`, `AGENTS.md`, and `.github/workflows/claude-review.yml`.
+2. Link the rules: create a `.ai-dev-system` junction/symlink to `AIDEV_HOME`, and add it to `.gitignore`.
+3. Pick your stack in `.claude/conventions.md` (e.g. `Active agent: agents/flutter.md`).
+4. Turn on graphify: `graphify opencode install && graphify hook install`.
+5. Make a `dev` branch and protect `main` in GitHub settings.
+6. In `claude-review.yml`, set `repository:` to your rules repo as `owner/repo`, and add a `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`) secret.
+
+Then: **plan** in Claude Code (`/plan`), **build** in OpenCode ("work issue #N"),
+and the **review** runs itself on the PR. Full commands (Mac + Windows) and a
+troubleshooting list are in `SETUP.md`.
+
 ## What's in this repo (global)
 
 | File / dir | Purpose |
