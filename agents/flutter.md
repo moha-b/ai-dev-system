@@ -13,7 +13,7 @@ exception or a sensitive value leak to the UI, the logs, or disk.
 - The project's `.claude/conventions.md` wins over this file.
 
 ## Default Stack
-These are the defaults. If `.claude/wiki/shared/conventions.md` declares a
+These are the defaults. If `.claude/conventions.md` declares a
 different choice for this project, **that file wins** — read it first.
 
 | Concern | Default |
