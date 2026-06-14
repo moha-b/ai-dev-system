@@ -1,0 +1,55 @@
+# .github/workflows/close-issue-on-merge.yml
+# Drop this into each project alongside opencode-review.yml.
+#
+# Why this exists: GitHub only auto-closes "Closes #N" issues when a PR merges
+# into the repo's DEFAULT branch. Our PRs merge into `dev`, not the default
+# (`main`), so issues would otherwise stay open until `dev` -> `main` at release.
+# This closes them as soon as the feature PR merges into `dev`.
+
+name: Close issue on merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [dev]          # feature PRs merge here
+
+permissions:
+  issues: write              # close the originating issue(s)
+  contents: read
+  pull-requests: read
+
+jobs:
+  close:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close referenced issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # Scan title + body for closing keywords followed by #N.
+          text="$PR_TITLE
+          $PR_BODY"
+          nums=$(printf '%s' "$text" \
+            | grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+' \
+            | grep -oE '[0-9]+' \
+            | sort -u || true)
+          if [ -z "$nums" ]; then
+            echo "No closing keywords (Closes/Fixes/Resolves #N) found in PR #$PR_NUMBER; nothing to close."
+            exit 0
+          fi
+          for n in $nums; do
+            state=$(gh issue view "$n" --repo "$REPO" --json state --jq .state 2>/dev/null || echo "MISSING")
+            if [ "$state" = "OPEN" ]; then
+              echo "Closing issue #$n (referenced by PR #$PR_NUMBER)."
+              gh issue close "$n" --repo "$REPO" --reason completed \
+                --comment "Closed automatically: merged via PR #$PR_NUMBER into \`dev\`."
+            else
+              echo "Issue #$n is $state; skipping."
+            fi
+          done
