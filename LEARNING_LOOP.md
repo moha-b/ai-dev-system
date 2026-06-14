@@ -1,8 +1,10 @@
 # LEARNING_LOOP.md
 
-The single spec for how a PR is reviewed and how the system learns from it. The
-GitHub Action's prompt points here; a human running a manual review follows the
-same steps. Tool-agnostic — identical under Claude Code or the Action runner.
+The single spec for how a PR is reviewed and how the system learns from it. Three
+readers follow it: **you** (the primary reviewer), **OpenCode's auto-review**
+(the GitHub Action backstop, whose prompt points here), and **`/fix`** (the Claude
+plan-mode skill that captures lessons and opens the promotion PR). Tool-agnostic —
+identical steps for all three.
 
 ---
 
@@ -57,16 +59,16 @@ are PRs against this repo; a human merges them.)
 
 ## Phase 4 — Enhance the agent (the learning loop)
 
-**Activation rule — when the loop edits `agents/<stack>.md`:**
+**Activation rule — when `/fix` edits `agents/<stack>.md`:**
 A first-time, single defect is logged only; the agent is left alone (no
-overfitting to flukes). The loop proposes an agent edit when **either**:
+overfitting to flukes). `/fix` proposes an agent edit when **either**:
 
 1. a lesson reaches **`Seen: 2`** (it recurred), **or**
-2. the **user explicitly corrected or overrode** Claude — a "do it this way"
-   instruction, or a human commit that fixes Claude's code.
+2. the **user explicitly corrected the output** — which is exactly what running
+   `/fix "<correction>"` in Claude plan mode signals.
 
-On activation, open a promotion PR that writes the corrected pattern into the
-agent's **`## Patterns we've settled`** section as a positive, imperative rule
+On activation, `/fix` opens a promotion PR that writes the corrected pattern into
+the agent's **`## Patterns we've settled`** section as a positive, imperative rule
 plus a ≤6-line example:
 
 ```

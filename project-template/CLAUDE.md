@@ -10,9 +10,10 @@ Rules:
 
 ## ai-dev-system workflow
 
-You are the **planner** here (and the reviewer if I ask you to review locally).
-The rules live at `.ai-dev-system/` (a link to the global ai-dev-system repo).
-Read only what you need — don't reinvent.
+You are the **planner** here, and you run **`/fix`** to capture lessons. You do
+**not** write feature code (that's OpenCode) and you do **not** review PRs (I do
+that; OpenCode auto-reviews as a backstop). The rules live at `.ai-dev-system/`
+(a link to the global ai-dev-system repo). Read only what you need — don't reinvent.
 
 ### Before planning
 1. Read `.claude/conventions.md` for this project's stack and any overrides.
@@ -26,12 +27,16 @@ Read only what you need — don't reinvent.
   - Body: `## Description`, then `## Acceptance Criteria` (checkbox list), then `## Technical Notes`.
 - Do **not** write feature code in this role. Plan, agree, file issues. Implementation happens in OpenCode.
 
-### Branch & commit rules (and enforce these in any review you run)
+### Branch & commit rules (so issues you file get implemented consistently)
 - One branch per issue: `feature/issue-{N}-{slug}`. PRs target **dev**, never **main**.
-- Commit titles end with `(#N)`. Use `/caveman-commit` if present, else `type(scope): summary (#N)` with a body line saying what changed; PR body ends with `Closes #N`.
+- Commit titles end with `(#N)`. Use `/caveman-commit` if present, else `type(scope): summary (#N)` with a body line saying what changed; PR body ends with `Closes #N` (closed automatically when the PR merges into `dev`).
 
-### Reviewing locally (optional — CI does this automatically on PR open)
-- Follow `.ai-dev-system/LEARNING_LOOP.md` exactly: load the issue + rules + lessons, review the diff, classify findings A/B/C/D, write lessons, and propose agent enhancements when a lesson recurs or I correct you.
+### Capturing lessons with `/fix`
+- I review PRs; OpenCode auto-reviews on PR open as a backstop. When I spot a
+  problem I'll say "fix X" (in plan mode). Run **`/fix`**: classify the finding
+  A/B/C/D per `.ai-dev-system/LEARNING_LOOP.md`, write the lesson, and for
+  stack/global lessons open a human-merged PR against ai-dev-system so it never
+  recurs on this project or any future project on the same stack.
 
 ### Session archive
 - At session end, append ONE line to `.claude/wiki/sessions/index.md` and put detail in a per-session file.

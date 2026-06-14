@@ -1,0 +1,99 @@
+# .github/workflows/opencode-review.yml
+# Drop this into each project. Fires automatically when a PR opens against `dev`,
+# and also responds to `/opencode` (or `/oc`) comments so you can re-trigger a
+# review by hand. You review PRs yourself; this is the automated safety net.
+#
+# Prereq: install the OpenCode GitHub app once per repo (`opencode github install`,
+# or from https://github.com/apps/opencode-agent).
+# Auth: add an ANTHROPIC_API_KEY repo secret (Settings -> Secrets and variables -> Actions).
+
+name: OpenCode PR Review
+
+on:
+  pull_request:
+    types: [opened]
+    branches: [dev]          # only review PRs targeting dev
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+permissions:
+  id-token: write            # OpenCode action mints an OIDC token
+  contents: read             # read the diff
+  pull-requests: write       # post the review
+  issues: read               # read the originating issue
+
+jobs:
+  # Automatic review on PR open.
+  review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Bring in the global rules/agents/lessons so review can read them.
+      - name: Checkout ai-dev-system (rules)
+        uses: actions/checkout@v4
+        with:
+          # owner/repo ONLY — never a full URL. e.g.  moha-b/ai-dev-system
+          repository: <your-org>/ai-dev-system
+          ref: main                      # name the branch so checkout skips the default-branch API lookup
+          path: .ai-dev-system
+          # If ai-dev-system is PUBLIC, no token is needed (recommended — it's just rules).
+          # If PRIVATE, create a read-only PAT secret and uncomment:
+          # token: ${{ secrets.AIDEV_REPO_TOKEN }}
+
+      - name: OpenCode review
+        uses: anomalyco/opencode/github@latest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          model: anthropic/claude-opus-4-8
+          prompt: |
+            You are reviewing this pull request as an automated safety net.
+            The human author reviews too — be concise and high-signal.
+            Follow .ai-dev-system/LEARNING_LOOP.md exactly.
+
+            1. Read the originating issue (the `Closes #N` in the PR body) with `gh issue view`.
+            2. Determine the stack from .claude/conventions.md, then read:
+               - .ai-dev-system/GLOBAL_RULES.md
+               - .ai-dev-system/agents/<stack>.md   (especially "Patterns we've settled")
+               - .ai-dev-system/lessons/<stack>.md
+               - .claude/lessons.local.md
+            3. Review the diff for: issue fit (every acceptance criterion, no scope creep),
+               GLOBAL_RULES violations, stack-agent violations, and any recurred lesson.
+            4. Post a grouped, file:line review. Never print secrets, PII, or stack traces.
+            5. Classify each finding A/B/C/D per LEARNING_LOOP.md. Do NOT edit the global
+               rules repo from CI. For any C/D finding or agent enhancement, end the review
+               with a "PROMOTE" block listing the exact lesson/agent edits — the human runs
+               `/fix` in Claude plan mode to open the human-merged PR against ai-dev-system.
+
+  # Manual re-trigger: comment `/opencode` or `/oc` on the PR.
+  comment:
+    if: |
+      github.event_name != 'pull_request' && (
+        contains(github.event.comment.body, '/oc') ||
+        contains(github.event.comment.body, '/opencode')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Run OpenCode
+        uses: anomalyco/opencode/github@latest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          model: anthropic/claude-opus-4-8

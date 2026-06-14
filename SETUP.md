@@ -59,7 +59,8 @@ cp -R "$AIDEV_HOME/project-template/.claude" .
 cp "$AIDEV_HOME/project-template/CLAUDE.md" .
 cp "$AIDEV_HOME/project-template/AGENTS.md" .
 mkdir -p .github/workflows
-cp "$AIDEV_HOME/workflows/claude-review.yml" .github/workflows/
+cp "$AIDEV_HOME/workflows/opencode-review.yml" .github/workflows/
+cp "$AIDEV_HOME/workflows/close-issue-on-merge.yml" .github/workflows/
 ```
 **Windows (PowerShell)**
 ```powershell
@@ -67,7 +68,8 @@ Copy-Item "$env:AIDEV_HOME\project-template\.claude" -Destination . -Recurse
 Copy-Item "$env:AIDEV_HOME\project-template\CLAUDE.md" .
 Copy-Item "$env:AIDEV_HOME\project-template\AGENTS.md" .
 New-Item -ItemType Directory -Force .github\workflows
-Copy-Item "$env:AIDEV_HOME\workflows\claude-review.yml" .github\workflows\
+Copy-Item "$env:AIDEV_HOME\workflows\opencode-review.yml" .github\workflows\
+Copy-Item "$env:AIDEV_HOME\workflows\close-issue-on-merge.yml" .github\workflows\
 ```
 > If you already have a graphify-generated `CLAUDE.md`/`AGENTS.md`, keep its
 > graphify block and paste the "ai-dev-system workflow" section under it instead
@@ -113,22 +115,30 @@ In GitHub → Settings → Branches: protect `main`, require PRs into `dev`.
 
 ## Part 3 — Turn on auto-review (per project)
 
-1. Open `.github/workflows/claude-review.yml`.
-2. Set `repository:` to your rules repo in **owner/repo** form — e.g. `moha-b/ai-dev-system`. **Not a URL.**
-3. Easiest: make that `ai-dev-system` repo **public** (it's only rules) so no token is needed.
-4. Add ONE secret in GitHub → Settings → Secrets and variables → Actions:
-   - `CLAUDE_CODE_OAUTH_TOKEN` (from your Claude subscription), **or** `ANTHROPIC_API_KEY`.
-   Make sure the matching line in the workflow's `with:` block is the uncommented one.
+You review PRs yourself; OpenCode runs an automatic review as a backstop.
 
-Now every PR into `dev` is reviewed automatically.
+1. Install the OpenCode GitHub app once for this repo:
+   ```bash
+   opencode github install
+   ```
+   (or install it from https://github.com/apps/opencode-agent)
+2. Open `.github/workflows/opencode-review.yml` and set `repository:` (in the rules
+   checkout step) to your rules repo in **owner/repo** form — e.g. `moha-b/ai-dev-system`. **Not a URL.**
+3. Easiest: make that `ai-dev-system` repo **public** (it's only rules) so no token is needed.
+4. Add the `ANTHROPIC_API_KEY` secret in GitHub → Settings → Secrets and variables → Actions.
+
+Now every PR into `dev` is reviewed automatically, and you can re-trigger a review
+any time by commenting `/opencode` on the PR. `close-issue-on-merge.yml` (copied in
+Part 2) closes the issue when the PR merges into `dev` — no extra config.
 
 ---
 
 ## Part 4 — Use it day to day
-1. **Plan** — Claude Code, `/plan`, describe a feature. It makes GitHub issues.
-2. **Build** — OpenCode, "work issue #N". One issue, one branch, one PR into `dev`.
-3. **Review** — fires automatically on the PR.
-4. **Repeat.** When `dev` is solid, open one PR `dev → main`.
+1. **Plan** — Claude Code, `/plan`, describe a feature. It makes GitHub issues. (Plan only — no code.)
+2. **Build** — OpenCode, "implement next issue". It grabs the next open issue: one issue, one branch, one PR into `dev`.
+3. **Review** — you review the PR; OpenCode's auto-review posts a backstop on PR open.
+4. **Fix lessons** — spot a problem? In Claude plan mode say "fix X". `/fix` records the lesson and PRs it to ai-dev-system so it never recurs on this stack.
+5. **Merge** — merging the PR into `dev` auto-closes the issue. When `dev` is solid, open one PR `dev → main`.
 
 ---
 

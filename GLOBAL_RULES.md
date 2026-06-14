@@ -13,7 +13,7 @@
 6. Run `graphify` after every merge to `dev` — don't batch.
 
 ## Roles (fixed)
-7. Planning is done in **Claude Code**; implementation in **OpenCode**; review by **Claude** (the GitHub Action). All three read the same on-disk rules and lessons.
+7. Planning is done in **Claude Code** (`/plan` → issues only). Implementation **and** the automated PR review are done by **OpenCode** (review fires on PR open as a safety net). Final review is **the user**. Lessons are captured by the user via **`/fix`** in Claude plan mode. All read the same on-disk rules and lessons.
 
 ## Security (hard stops)
 8. No hardcoded secrets — no keys, tokens, or credential-bearing URLs in source. Inject config at build/run time; keep env files out of version control.
@@ -32,5 +32,5 @@
 17. Validate and sanitize all external input (user input, deep links, webhooks).
 
 ## Review & learning contract
-18. Every PR is reviewed against the issue's acceptance criteria, this file, the active `agents/<stack>.md`, the global `lessons/<stack>.md`, and the project `lessons.local.md`.
-19. Findings are classified and routed per `LEARNING_LOOP.md`. Recurrence or explicit user correction enhances the agent by reviewed PR.
+18. Every PR is reviewed — by the user, and automatically by OpenCode on PR open — against the issue's acceptance criteria, this file, the active `agents/<stack>.md`, the global `lessons/<stack>.md`, and the project `lessons.local.md`.
+19. Findings are classified and routed per `LEARNING_LOOP.md`. The user enhances the agent by running `/fix` (Claude plan mode), which opens a human-merged PR against this repo on recurrence or explicit correction.

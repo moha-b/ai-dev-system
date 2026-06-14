@@ -2,18 +2,19 @@
 
 A **global, stack-agnostic** AI development system. One repo you own, adopted by
 every project. It turns a plain-language idea into GitHub issues, implements each
-on its own branch under a stack-specific rule set, auto-reviews every PR against
-those rules and the issue, and **feeds what review learns back into the rules and
-the agent itself** — so the same mistake never recurs and the same request comes
-out right the first time on the next project.
+on its own branch under a stack-specific rule set, runs an automated PR review as a
+safety net, and **feeds what you correct back into the rules and the agent itself**
+— so the same mistake never recurs and the same request comes out right the first
+time on the next project.
 
 ## One idea
 
-The rules live on disk. Three roles take turns reading them:
+The rules live on disk. The roles take turns reading them:
 
-- **Claude Code plans** — you chat, agree the features, it opens one GitHub issue per feature.
-- **OpenCode implements** — one branch per issue, code to the stack agent's rules, `/caveman-commit … (#N)`, PR into `dev`.
-- **Claude reviews** — the GitHub Action fires on PR open, checks the diff against the issue + rules + lessons, comments, and learns.
+- **Claude Code plans** — you chat, agree the features, it opens one GitHub issue per feature. That's all it does: no code, no review.
+- **OpenCode implements** — say "implement next issue"; it grabs the next open issue, codes to the stack agent's rules, `/caveman-commit … (#N)`, PR into `dev`.
+- **You review** — the human is the real reviewer. **OpenCode auto-reviews** each PR on open as a backstop (`/opencode` re-triggers it).
+- **`/fix` learns** — when you spot a problem, "fix X" in Claude plan mode captures it as a durable lesson (PR to this repo) so it never recurs on this stack.
 
 Both tools read the same files, which is *why* swapping the implementer can't drift the structure — nothing lives in one tool's head.
 
@@ -22,15 +23,16 @@ Both tools read the same files, which is *why* swapping the implementer can't dr
 Once-per-computer setup (clone this repo, set `AIDEV_HOME`, install context-mode)
 is in `SETUP.md` Part 1. After that, each new project is just:
 
-1. Copy the templates in: `.claude/` folder, `CLAUDE.md`, `AGENTS.md`, and `.github/workflows/claude-review.yml`.
+1. Copy the templates in: `.claude/` folder, `CLAUDE.md`, `AGENTS.md`, and both workflows (`.github/workflows/opencode-review.yml`, `.github/workflows/close-issue-on-merge.yml`).
 2. Link the rules: create a `.ai-dev-system` junction/symlink to `AIDEV_HOME`, and add it to `.gitignore`.
 3. Pick your stack in `.claude/conventions.md` (e.g. `Active agent: agents/flutter.md`).
 4. Turn on graphify: `graphify opencode install && graphify hook install`.
 5. Make a `dev` branch and protect `main` in GitHub settings.
-6. In `claude-review.yml`, set `repository:` to your rules repo as `owner/repo`, and add a `CLAUDE_CODE_OAUTH_TOKEN` (or `ANTHROPIC_API_KEY`) secret.
+6. Install the OpenCode GitHub app (`opencode github install`), set `repository:` in `opencode-review.yml` to your rules repo as `owner/repo`, and add an `ANTHROPIC_API_KEY` secret.
 
-Then: **plan** in Claude Code (`/plan`), **build** in OpenCode ("work issue #N"),
-and the **review** runs itself on the PR. Full commands (Mac + Windows) and a
+Then: **plan** in Claude Code (`/plan`), **build** in OpenCode ("implement next
+issue"), **you review** the PR (OpenCode auto-reviews as a backstop), and merging
+into `dev` auto-closes the issue. Full commands (Mac + Windows) and a
 troubleshooting list are in `SETUP.md`.
 
 ## What's in this repo (global)
@@ -40,8 +42,9 @@ troubleshooting list are in `SETUP.md`.
 | `GLOBAL_RULES.md` | Cross-stack non-negotiables every agent obeys |
 | `agents/<stack>.md` | Full, self-enhancing per-stack rule set (e.g. `flutter.md`) |
 | `lessons/<stack>.md` | **Stack-scoped lessons, reused by every project of that stack** |
-| `LEARNING_LOOP.md` | How review classifies findings, writes lessons, and enhances the agent |
-| `workflows/claude-review.yml` | Drop-in GitHub Action: auto-review on PR open |
+| `LEARNING_LOOP.md` | How findings are classified, lessons written, and the agent enhanced (via `/fix`) |
+| `workflows/opencode-review.yml` | Drop-in GitHub Action: OpenCode auto-review on PR open (+ `/opencode` re-trigger) |
+| `workflows/close-issue-on-merge.yml` | Drop-in GitHub Action: closes `Closes #N` issues when a PR merges into `dev` |
 | `project-template/.claude/` | Copied into each repo (conventions, local lessons, session archive) |
 
 ## Lessons are stack-scoped, not project-scoped
@@ -56,27 +59,29 @@ Cross-stack truths don't go in lessons at all — they go in `GLOBAL_RULES.md`.
 
 ## The learning loop (self-enhancing agent)
 
-Review classifies each finding and routes it (full spec in `LEARNING_LOOP.md`):
+You drive the loop with **`/fix`** (in Claude plan mode) when you spot a problem;
+OpenCode's auto-review also flags candidates in a `PROMOTE` block. Each finding is
+classified and routed (full spec in `LEARNING_LOOP.md`):
 
 | Class | Means | Lands in |
 |---|---|---|
-| A — defect | wrong only in this PR | PR comment, author fixes |
+| A — defect | wrong only in this PR | fix the PR; no lesson |
 | B — repo lesson | recurs in *this* repo | `.claude/lessons.local.md` |
 | C — stack lesson | true for any project on this stack | `lessons/<stack>.md` (global) |
 | D — cross-stack | true everywhere | `GLOBAL_RULES.md` |
 
-**When the loop enhances the agent (my decision):** a single first-time defect is
-only logged — agents are not touched, to avoid overfitting to a fluke. The loop
-edits `agents/<stack>.md` when **either** of these is true:
+**When the loop enhances the agent:** a single first-time defect is only logged —
+agents are not touched, to avoid overfitting to a fluke. `/fix` edits
+`agents/<stack>.md` when **either**:
 
-1. a lesson **recurs** (recorded a second time), or
-2. the **user explicitly corrects or overrides** Claude's output ("no, do it this way", or a human bugfix commit on top of Claude's code).
+1. a lesson **recurs** (recorded a second time, `Seen: 2`), or
+2. you **explicitly correct** the output ("no, do it this way" — exactly what `/fix` is for).
 
-On that trigger it opens a promotion PR that writes the corrected pattern into the
-agent's "Patterns we've settled" section — a positive rule plus a short example —
-so the next time that feature or bug comes up, the agent builds it right the first
-time instead of repeating the miss. **You merge the PR** (human-gated), so one
-noisy repo can't rewrite global behavior.
+On that trigger `/fix` opens a promotion PR that writes the corrected pattern into
+the agent's "Patterns we've settled" section — a positive rule plus a short example
+— so the next time that feature or bug comes up, the agent builds it right the
+first time on this project *and any future project on the same stack*. **You merge
+the PR** (human-gated), so one noisy repo can't rewrite global behavior.
 
 ## Session history is archived, read on demand
 

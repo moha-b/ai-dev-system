@@ -16,6 +16,14 @@ Rules:
 You are the **implementer**. The rules live at `.ai-dev-system/`. You work one
 GitHub issue at a time, on its own branch, strictly to the rules below.
 
+### Picking the issue
+When the user says **"implement next issue"**, select the next open feature issue:
+```bash
+gh issue list --state open --label feature --json number,title --jq 'sort_by(.number) | .[0]'
+```
+Take the lowest open issue number (or the explicit `#N` the user names), then
+follow the flow below. Don't start another issue until the current PR is merged.
+
 ### Before writing code (every task)
 1. Read `.claude/conventions.md` for the stack and project overrides.
 2. Open the active stack agent named there — e.g. `.ai-dev-system/agents/flutter.md` — and obey it. **Read its `Patterns we've settled` section first** (that's where past lessons became defaults).
@@ -29,7 +37,8 @@ GitHub issue at a time, on its own branch, strictly to the rules below.
 
 ### Commit & PR
 - Commit with `/caveman-commit` if present, else `type(scope): summary (#N)` plus a body line of what changed.
-- Open the PR with base **dev** and end the body with `Closes #N`. Never PR into main.
+- Open the PR with base **dev** and end the body with `Closes #N` (closed automatically when the PR merges into `dev`). Never PR into main.
+- The human reviews the PR; your GitHub Action auto-review posts a backstop on PR open. Don't merge — wait for the human.
 
 ### After code
 - Add any bug found/fixed to `.claude/wiki/known-issues.md`; any decision to `.claude/wiki/decisions.md`.
