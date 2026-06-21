@@ -34,3 +34,6 @@
 ## Review & learning contract
 18. Every PR is reviewed — by the user, and automatically by OpenCode on PR open — against the issue's acceptance criteria, this file, the active `agents/<stack>.md`, the global `lessons/<stack>.md`, and the project `lessons.local.md`.
 19. Findings are classified and routed per `LEARNING_LOOP.md`. The user enhances the agent by running `/fix` (Claude plan mode), which opens a human-merged PR against this repo on recurrence or explicit correction.
+
+## Definition of done (build gate)
+20. Never open or merge a PR whose code was never built. Foundation/scaffolding (build files, module graph, DI wiring, version catalog) must pass a real build locally before the PR opens — not just "looks right." A green build is the minimum bar; OpenCode does not commit scaffolding it has not compiled.

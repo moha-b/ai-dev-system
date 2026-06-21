@@ -127,3 +127,19 @@ Example:
 // repo maps NoteEntity -> Note; catches IO -> DomainResult.Failure
 ```
 _(Realizes rules 14–18; from L6.)_
+
+### Foundation build gate — settled 2026-06-21
+Do: before opening a foundation/scaffolding PR, run a real two-target build, commit only when green:
+```
+./gradlew assembleDebug compileKotlinIosArm64 compileKotlinIosSimulatorArm64
+```
+Avoid: committing a module/Gradle skeleton that was never built. One green build catches the whole class below.
+Watch (all caught by the build gate):
+- Catalog plugin alias is kebab, accessor is dotted: `kotlin-multiplatform` → `libs.plugins.kotlin.multiplatform` (a camelCase alias gives a single-segment accessor and won't resolve).
+- KSP version must match Kotlin exactly; the newest Kotlin often has no KSP yet — pin Kotlin to the latest version that does.
+- With `includeBuild("build-logic")`, declare every plugin in the root `plugins {}` as `alias(...) apply false`; a versioned alias applied in a subproject for a plugin build-logic also leaks fails with "already on the classpath with an unknown version."
+- AGP 9 has built-in Kotlin: drop `org.jetbrains.kotlin.android` from `com.android.application` modules.
+- `room-ktx` is Android-only — never in `commonMain` (it drags `kotlinx-coroutines-android` into iOS). `room-runtime` covers KMP.
+- Koin 4.x moved the `viewModel { }` module DSL to `io.insert-koin:koin-core-viewmodel`, not `koin-core`.
+- A module must depend on what it uses; `implementation` is not transitive — use it directly or expose via `api`. _(Realizes GLOBAL_RULES rule 20.)_
+_(From the issue-3 foundation that merged without ever building.)_
