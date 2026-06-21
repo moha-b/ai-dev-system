@@ -34,4 +34,4 @@ Reaching for `expect`/`actual` singletons to supply platform services (drivers, 
 ### L6 — Persistence is Room (KMP), not SQLDelight
 **Seen: 1** · Class C
 The kmp/cmp stack standardizes on androidx Room (KMP) for local persistence instead of SQLDelight. Use `@Entity`/`@Dao`/`@Database` with KSP, a `RoomDatabaseConstructor` `expect`/`actual` + `BundledSQLiteDriver`, and provide the RoomDatabase through Koin (never built inside a repo). Keep Room entities inside `:data` and map to domain models (L3 applies to Room entities). Reactive reads via Room `Flow` queries; convert IO/Room exceptions to `DomainResult.Failure` at the repo boundary.
-→ Promoted to `agents/kmp.md` rules 14/15/16/18/51/54 + Patterns.
+→ Promoted to `agents/kmp.md` rules 14/15/16/18/51/54 + Patterns. (PR #4 to ai-dev-system, human-gated.)
